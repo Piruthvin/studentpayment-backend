@@ -8,6 +8,19 @@ This document describes the backend (Express + MongoDB) API, environment configu
 - JWT auth (Bearer)
 - Axios (payment API calls)
 
+## Setup and Installation
+1) Clone the repo and open the `backend/` folder
+2) Copy `.env.example` to `.env` and fill values (see Environment Variables below)
+3) Install dependencies
+```bash
+npm install
+```
+4) Run in development (auto-restarts on code or .env changes)
+```bash
+npm run dev
+```
+Server defaults to `http://localhost:4000`
+
 ## Run locally
 1) Copy `.env.example` to `.env` and fill values (see Env section below)
 2) Install deps: `npm install`
@@ -15,7 +28,7 @@ This document describes the backend (Express + MongoDB) API, environment configu
 
 Default port: `4000`
 
-## Environment variables
+## Environment Variable Configuration
 See `backend/.env.example` for full list. Important keys:
 - `MONGO_URI` (MongoDB Atlas)
 - `JWT_SECRET`, `JWT_EXPIRES_IN`
@@ -27,6 +40,21 @@ See `backend/.env.example` for full list. Important keys:
 - `DEV_FAKE_GATEWAY` (optional: true/false)
 - `DEV_AUTO_CAPTURE` (optional: true/false)
 
+Example `.env` (dev)
+```
+PORT=4000
+MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
+JWT_SECRET="supersecret"
+JWT_EXPIRES_IN="1d"
+PAYMENT_API_BASE=https://dev-vanilla.edviron.com/erp
+PAYMENT_API_KEY="<paste API key>"
+PAYMENT_PG_KEY="edvtest01"
+SCHOOL_ID="65b0e6293e9f76a9694d84b4"
+APP_BASE_URL="http://localhost:5173"
+DEV_FAKE_GATEWAY=false
+DEV_AUTO_CAPTURE=false
+```
+
 ## Authentication
 - Login to get a JWT and pass it on all protected requests as `Authorization: Bearer <token>`
 - Protected routes require role in JWT (admin or student)
@@ -36,6 +64,58 @@ See `backend/.env.example` for full list. Important keys:
 - `OrderStatus` (collect_id -> Order._id, status fields, payment_time, external_collect_request_id)
 - `WebhookLog` (headers + body)
 - `User` (email, password hash, role)
+
+## API Usage Examples (curl)
+
+Login (get token)
+```bash
+curl -X POST "http://localhost:4000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"admin@example.com",
+    "password":"secret123"
+  }'
+```
+
+Create Payment
+```bash
+curl -X POST "http://localhost:4000/payments/create-payment" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "school_id": "65b0e6293e9f76a9694d84b4",
+    "order_amount": 7500,
+    "student_info": { "name": "Test", "id": "S123", "email": "test@example.com" }
+  }'
+```
+
+Check Payment Status (provider)
+```bash
+curl -X GET "http://localhost:4000/payments/check/<collect_request_id>" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Webhook (simulate)
+```bash
+curl -X POST "http://localhost:4000/webhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": 200,
+    "order_info": {
+      "order_id": "<collect_id or custom_order_id>",
+      "order_amount": 2000,
+      "transaction_amount": 2200,
+      "gateway": "PhonePe",
+      "bank_reference": "YESBNK222",
+      "status": "success",
+      "payment_mode": "upi",
+      "payemnt_details": "success@ybl",
+      "Payment_message": "payment success",
+      "payment_time": "2025-04-23T08:14:21.945+00:00",
+      "error_message": "NA"
+    }
+  }'
+```
 
 ## Endpoints
 Base URL: `http://localhost:4000`
